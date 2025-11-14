@@ -141,24 +141,53 @@ function updateTranscriptDisplay() {
   const textarea = document.getElementById("transcriptTextarea");
   if (!textarea) return;
 
-  // Find all transcript lines that should be visible (before current time)
-  const visibleLines = [];
+  // Find the current position in the transcript
+  let displayText = "";
+  let foundCurrentSegment = false;
+
   for (let i = 0; i < transcriptLines.length; i++) {
-    if (currentTime >= transcriptLines[i].timestamp) {
-      visibleLines.push(transcriptLines[i].text);
+    const currentSegment = transcriptLines[i];
+    const nextSegment = transcriptLines[i + 1];
+
+    if (currentTime >= currentSegment.timestamp) {
+      if (nextSegment && currentTime < nextSegment.timestamp) {
+        // We're currently in this segment - show partial text with typing effect
+        const segmentDuration = nextSegment.timestamp - currentSegment.timestamp;
+        const timeIntoSegment = currentTime - currentSegment.timestamp;
+        const progress = Math.min(timeIntoSegment / segmentDuration, 1);
+        
+        // Calculate how many characters to show based on progress
+        const totalChars = currentSegment.text.length;
+        const charsToShow = Math.floor(progress * totalChars);
+        
+        // Add all previous complete segments
+        if (displayText) displayText += "\n\n";
+        displayText += currentSegment.text.substring(0, charsToShow);
+        
+        foundCurrentSegment = true;
+        break;
+      } else if (!nextSegment) {
+        // This is the last segment and we're past its start time
+        if (displayText) displayText += "\n\n";
+        displayText += currentSegment.text;
+        foundCurrentSegment = true;
+        break;
+      } else {
+        // We're past this segment completely - show full text
+        if (displayText) displayText += "\n\n";
+        displayText += currentSegment.text;
+      }
     } else {
+      // We haven't reached this segment yet
       break;
     }
   }
 
-  if (visibleLines.length === 0) {
+  if (!foundCurrentSegment && displayText === "") {
     textarea.value = "Hit play to see transcript appear here.";
     return;
   }
 
-  // Display only the visible transcript text (without timestamps for easy copying)
-  const displayText = visibleLines.join('\n\n');
-  
   // Only update if content has changed to avoid cursor jumping
   if (textarea.value !== displayText) {
     const wasAtBottom = textarea.scrollTop >= (textarea.scrollHeight - textarea.clientHeight - 10);
