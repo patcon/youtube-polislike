@@ -2,6 +2,8 @@ let player;
 let statements = [];
 let activeIndex = -1;      // last fully visible / voted statement
 let unlockedIndex = -1;    // highest index whose timecode has passed
+let transcript = "";       // full transcript text
+let transcriptLines = [];  // parsed transcript lines with timestamps
 
 function extractYouTubeID(url) {
   const reg = /(?:v=|youtu\.be\/|embed\/)([^&?/]+)/;
@@ -50,9 +52,123 @@ async function loadVideo(id = null) {
     statements = [];
   }
 
+  // Load transcript file
+  await loadTranscript(id);
+
   activeIndex = -1;
   unlockedIndex = -1;
   renderStatements();
+}
+
+/* --- Transcript functions --- */
+async function loadTranscript(videoId) {
+  const transcriptFile = `data/rooignore/transcript.${videoId}.txt`;
+  try {
+    const res = await fetch(transcriptFile);
+    transcript = await res.text();
+    parseTranscript();
+    displayTranscript();
+  } catch (err) {
+    transcript = "";
+    transcriptLines = [];
+    const textarea = document.getElementById("transcriptTextarea");
+    if (textarea) {
+      textarea.value = "Transcript not available for this video.";
+    }
+  }
+}
+
+function parseTranscript() {
+  transcriptLines = [];
+  if (!transcript) return;
+
+  const lines = transcript.split('\n');
+  let currentTime = 0;
+  let currentText = "";
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    if (!trimmedLine) continue;
+
+    // Check if line starts with timestamp (MM:SS format)
+    const timestampMatch = trimmedLine.match(/^(\d{2}:\d{2})\s+(.*)$/);
+    if (timestampMatch) {
+      // Save previous entry if exists
+      if (currentText) {
+        transcriptLines.push({
+          timestamp: currentTime,
+          text: currentText.trim()
+        });
+      }
+      
+      // Parse new timestamp
+      const [, timeStr, text] = timestampMatch;
+      const [minutes, seconds] = timeStr.split(':').map(Number);
+      currentTime = minutes * 60 + seconds;
+      currentText = text;
+    } else {
+      // Continuation of previous text
+      currentText += " " + trimmedLine;
+    }
+  }
+
+  // Add final entry
+  if (currentText) {
+    transcriptLines.push({
+      timestamp: currentTime,
+      text: currentText.trim()
+    });
+  }
+}
+
+function displayTranscript() {
+  const textarea = document.getElementById("transcriptTextarea");
+  if (!textarea) return;
+
+  if (!transcriptLines.length) {
+    textarea.value = "Transcript not available for this video.";
+    return;
+  }
+
+  // Initially show empty transcript - will be updated by updateTranscriptDisplay
+  textarea.value = "Hit play to see transcript appear here.";
+}
+
+function updateTranscriptDisplay() {
+  if (!player || !transcriptLines.length) return;
+
+  const currentTime = player.getCurrentTime();
+  const textarea = document.getElementById("transcriptTextarea");
+  if (!textarea) return;
+
+  // Find all transcript lines that should be visible (before current time)
+  const visibleLines = [];
+  for (let i = 0; i < transcriptLines.length; i++) {
+    if (currentTime >= transcriptLines[i].timestamp) {
+      visibleLines.push(transcriptLines[i].text);
+    } else {
+      break;
+    }
+  }
+
+  if (visibleLines.length === 0) {
+    textarea.value = "Hit play to see transcript appear here.";
+    return;
+  }
+
+  // Display only the visible transcript text (without timestamps for easy copying)
+  const displayText = visibleLines.join('\n\n');
+  
+  // Only update if content has changed to avoid cursor jumping
+  if (textarea.value !== displayText) {
+    const wasAtBottom = textarea.scrollTop >= (textarea.scrollHeight - textarea.clientHeight - 10);
+    textarea.value = displayText;
+    
+    // Auto-scroll to bottom to show latest text
+    if (wasAtBottom || textarea.scrollTop === 0) {
+      textarea.scrollTop = textarea.scrollHeight;
+    }
+  }
 }
 
 /* --- Poll video time --- */
@@ -60,6 +176,7 @@ function startPolling() {
   setInterval(() => {
     checkForUnlocks();
     drawTimeline(); // update timeline
+    updateTranscriptDisplay(); // update visible transcript content
   }, 100); // update more smoothly
 }
 
