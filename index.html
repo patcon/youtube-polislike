@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>YouTube Voting App</title>
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      height: 100vh;
+      font-family: sans-serif;
+    }
+    #videoPane {
+      flex: 2;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+    }
+    #videoContainer {
+      flex: 1;
+    }
+    #controls {
+      padding: 10px;
+      background: #f3f3f3;
+    }
+    #rightPane {
+      flex: 1;
+      border-left: 1px solid #ccc;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    #statement {
+      font-size: 18px;
+      line-height: 1.4;
+      white-space: pre-wrap;
+    }
+    #buttons button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="videoPane">
+    <div id="controls">
+      <input id="ytInput" type="text" placeholder="Paste YouTube URL here" style="width:60%;">
+      <button onclick="loadVideo()">Load Video</button>
+    </div>
+    <div id="videoContainer"></div>
+  </div>
+
+  <div id="rightPane">
+    <div id="statement"></div>
+
+    <div id="buttons">
+      <button onclick="sendVote(1)" style="background:#c8f3c8;">Agree</button>
+      <button onclick="sendVote(-1)" style="background:#f3c8c8;">Disagree</button>
+      <button onclick="sendVote(0)" style="background:#ddd;">Pass</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script src="https://www.youtube.com/iframe_api"></script>
+</body>
+</html>
