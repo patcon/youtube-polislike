@@ -228,7 +228,13 @@ function renderStatements() {
   const existing = Array.from(pane.children);
   const newContent = [];
 
-  if (unlockedIndex < 0) return;
+  if (unlockedIndex < 0) {
+    // Show message when video is loaded but no statements unlocked yet
+    if (statements.length > 0) {
+      pane.innerHTML = "Hit play to see statements appear here.";
+    }
+    return;
+  }
 
   for (let i = 0; i <= unlockedIndex; i++) {
     const s = statements[i];
