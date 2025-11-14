@@ -35,6 +35,27 @@
       <canvas id="timelineCanvas"></canvas>
     </div>
 
+    <!-- Manage Statements section -->
+    <div id="manageStatementsSection">
+      <div id="manageStatementsToggle" class="section-toggle">
+        <span class="toggle-icon">+</span>
+        <span class="toggle-label">Manage Statements</span>
+      </div>
+      <div id="manageStatementsContent" class="collapsible-content">
+        <!-- Add statement form -->
+        <div id="addStatementForm">
+          <input type="text" id="newStatementInput" placeholder="Enter new statement..." maxlength="260">
+          <button id="addStatementBtn">Add at Current Time</button>
+        </div>
+
+        <!-- Export section -->
+        <div id="exportContent">
+          <button id="exportBtn">Export Statements</button>
+          <textarea id="exportTextarea" placeholder="Exported statements will appear here..." readonly></textarea>
+        </div>
+      </div>
+    </div>
+
     <div id="buttons">
       <button onclick="sendVote(-1)" style="background:#f3c8c8;">Disagree</button>
       <button onclick="sendVote(0)" style="background:#ddd;">Pass</button>

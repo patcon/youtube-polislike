@@ -88,7 +88,7 @@ function checkForUnlocks() {
         // Transition from waiting state to face-out, then move to next
         waitingDiv.classList.remove("no-next");
         waitingDiv.classList.add("facing-out");
-        
+
         setTimeout(() => {
           activeIndex++;
           renderStatements();
@@ -463,4 +463,98 @@ document.addEventListener("keydown", (event) => {
       sendVote(0); // Pass
       break;
   }
+});
+
+/* --- Add new statement functionality --- */
+function addNewStatement() {
+  const input = document.getElementById("newStatementInput");
+  const text = input.value.trim();
+
+  if (!text) {
+    alert("Please enter a statement");
+    return;
+  }
+
+  if (!player) {
+    alert("Please load a video first");
+    return;
+  }
+
+  const currentTime = player.getCurrentTime();
+  const newStatementId = Math.max(...statements.map(s => s.statementId), 0) + 1;
+
+  const newStatement = {
+    statementId: newStatementId,
+    timecode: Math.floor(currentTime * 10) / 10, // Round to 1 decimal place
+    text: text
+  };
+
+  // Add to statements array and sort by timecode
+  statements.push(newStatement);
+  statements.sort((a, b) => Number(a.timecode) - Number(b.timecode));
+
+  // Clear input
+  input.value = "";
+
+  // Re-render statements to show the new one
+  renderStatements();
+
+  console.log("Added new statement:", newStatement);
+}
+
+/* --- Export functionality --- */
+function exportStatements() {
+  const textarea = document.getElementById("exportTextarea");
+
+  if (statements.length === 0) {
+    textarea.value = "No statements to export";
+    return;
+  }
+
+  // Create JSON export
+  const exportData = JSON.stringify(statements, null, 2);
+  textarea.value = exportData;
+
+  // Select all text for easy copying
+  textarea.select();
+  textarea.setSelectionRange(0, 99999); // For mobile devices
+
+  console.log("Exported statements:", statements);
+}
+
+/* --- Collapsible section functionality --- */
+function toggleSection(toggleElement, contentElement) {
+  const isExpanded = contentElement.classList.contains('expanded');
+
+  if (isExpanded) {
+    contentElement.classList.remove('expanded');
+    toggleElement.classList.remove('expanded');
+  } else {
+    contentElement.classList.add('expanded');
+    toggleElement.classList.add('expanded');
+  }
+}
+
+// Event listeners for new functionality
+document.addEventListener("DOMContentLoaded", () => {
+  // Manage statements toggle
+  document.getElementById("manageStatementsToggle").addEventListener("click", () => {
+    const toggle = document.getElementById("manageStatementsToggle");
+    const content = document.getElementById("manageStatementsContent");
+    toggleSection(toggle, content);
+  });
+
+  // Add statement button
+  document.getElementById("addStatementBtn").addEventListener("click", addNewStatement);
+
+  // Export button
+  document.getElementById("exportBtn").addEventListener("click", exportStatements);
+
+  // Enter key in statement input
+  document.getElementById("newStatementInput").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      addNewStatement();
+    }
+  });
 });

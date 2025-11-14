@@ -39,7 +39,7 @@ There is currently no backend, and statement and vote data is hardcoded into the
     - [ ] pre-process statements from a transcript
     - [ ] figure out UX to solicit _spoken_ statements from viewers
     - [ ] figure out UX to solicit _custom_ statements from viewers
- 
+
 # Inspiration
 - [VR Design Unpacked: The Secret to Beat Saber’s Fun Isn’t What You Think](https://www.roadtovr.com/beat-saber-instructed-motion-until-you-fall-inside-xr-design/)  
   > The scoring system is actually based on motion. In fact, it’s actually designed to make you move in specific ways if you want the highest score. [...] And while Beat Saber has music that certain helps you know when to move, more than a rhythm game… it’s a **motion game**. Specifically, Beat Saber is built around a VR design concept that I like to call ‘**Instructed Motion**’, which is when a game asks you to move your body in specific ways.
