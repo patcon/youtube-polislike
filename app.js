@@ -1,7 +1,7 @@
 let player;
 let statements = [];
-let activeIndex = -1; // last fully visible / voted statement
-let unlockedIndex = -1; // highest index whose timecode has passed
+let activeIndex = -1;      // last fully visible / voted statement
+let unlockedIndex = -1;    // highest index whose timecode has passed
 
 function extractYouTubeID(url) {
   const reg = /(?:v=|youtu\.be\/|embed\/)([^&?/]+)/;
@@ -9,20 +9,30 @@ function extractYouTubeID(url) {
   return match ? match[1] : null;
 }
 
-async function loadVideo() {
-  const url = document.getElementById("ytInput").value;
-  const id = extractYouTubeID(url);
-
+// Load a video by ID or from input
+async function loadVideo(id = null) {
+  if (!id) {
+    const url = document.getElementById("ytInput").value;
+    id = extractYouTubeID(url);
+  }
   if (!id) return alert("Invalid YouTube URL");
+
+  // Update URL hash
+  window.location.hash = id;
+
+  // Destroy old player if exists
+  if (player && player.destroy) player.destroy();
 
   // Create YouTube player
   player = new YT.Player("videoContainer", {
     height: "100%",
     width: "100%",
     videoId: id,
-    playerVars: { controls: 1 },
+    playerVars: { controls: 1, rel: 0, modestbranding: 1 },
     events: { onReady: startPolling }
   });
+
+  // Clear statements pane
   document.getElementById("statementsPane").innerHTML = "";
 
   // Load statements JSON
@@ -51,7 +61,6 @@ function checkForUnlocks() {
   const t = player.getCurrentTime();
   let newest = -1;
 
-  // Find the newest statement whose timecode has passed
   for (let i = 0; i < statements.length; i++) {
     if (t >= Number(statements[i].timecode)) newest = i;
     else break;
@@ -60,7 +69,7 @@ function checkForUnlocks() {
   if (newest !== unlockedIndex) {
     unlockedIndex = newest;
 
-    // If first statement unlocked, make it active
+    // First unlocked statement becomes active
     if (activeIndex < 0 && unlockedIndex >= 0) activeIndex = 0;
 
     renderStatements();
@@ -69,16 +78,26 @@ function checkForUnlocks() {
 
 /* --- Redaction helper --- */
 function redactText(str) {
-  // Replace every 2 consecutive non-whitespace chars with one █
-  const pairs = str.match(/(?:\S{2})|\S/g) || [];
-  return pairs.map(chunk => chunk.trim() ? "█" : chunk).join(" ");
+  // Split by word boundaries
+  return str.split(/(\s+)/).map(token => {
+    // Preserve whitespace
+    if (/^\s+$/.test(token)) return token;
+
+    // Remove punctuation
+    const lettersOnly = token.replace(/[^\w]/g, "");
+
+    if (!lettersOnly) return token; // keep token if no letters
+
+    // Number of blocks: divide letters by 2, round up
+    const numBlocks = Math.ceil(lettersOnly.length / 2);
+
+    return "█".repeat(numBlocks);
+  }).join("");
 }
 
 /* --- Render statements --- */
 function renderStatements() {
   const pane = document.getElementById("statementsPane");
-
-  // Track existing elements to apply fade-out
   const existing = Array.from(pane.children);
   const newContent = [];
 
@@ -87,7 +106,6 @@ function renderStatements() {
   for (let i = 0; i <= unlockedIndex; i++) {
     const s = statements[i];
 
-    // Reuse existing div if it exists
     let div = existing.find(d => d.dataset.id == s.statementId);
     if (!div) {
       div = document.createElement("div");
@@ -99,7 +117,6 @@ function renderStatements() {
     const prefix = `#${s.statementId} `;
 
     if (i < activeIndex) {
-      // Already voted, keep as voted class (fade handled in vote)
       div.className = "statement voted";
     } else if (i === activeIndex) {
       div.className = "statement active";
@@ -112,11 +129,8 @@ function renderStatements() {
     newContent.push(div);
   }
 
-  // Remove any old statements not in newContent after fade
   existing.forEach(div => {
-    if (!newContent.includes(div)) {
-      div.remove();
-    }
+    if (!newContent.includes(div)) div.remove();
   });
 }
 
@@ -142,16 +156,26 @@ function sendVote(voteValue) {
     loadedTimecode: current.timecode,
     videoTimecode: t
   };
-
   console.log("VOTE:", voteObj);
 
-  // Apply voted class to trigger fade/slide
+  // Fade out voted statement
   const div = document.querySelector(`#statementsPane .statement[data-id='${current.statementId}']`);
   if (div) div.classList.add("voted");
 
-  // After transition ends, move activeIndex forward and re-render
   div.addEventListener("transitionend", () => {
     activeIndex++;
     renderStatements();
   }, { once: true });
 }
+
+/* --- YouTube API ready callback --- */
+function onYouTubeIframeAPIReady() {
+  const hashId = window.location.hash.slice(1);
+  if (hashId) {
+    document.getElementById("ytInput").value = `https://www.youtube.com/watch?v=${hashId}`;
+    loadVideo(hashId);
+  }
+}
+
+// Optional: allow manual load via button
+document.getElementById("loadBtn")?.addEventListener("click", () => loadVideo());
