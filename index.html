@@ -87,12 +87,12 @@
     #buttons {
       margin-top: 10px;
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
+      gap: 10px;
     }
     #buttons button {
-      width: 100%;
+      flex: 1;
       padding: 12px;
-      margin-top: 10px;
       font-size: 16px;
       cursor: pointer;
     }
@@ -118,9 +118,9 @@
     </div>
 
     <div id="buttons">
-      <button onclick="sendVote(1)" style="background:#c8f3c8;">Agree</button>
       <button onclick="sendVote(-1)" style="background:#f3c8c8;">Disagree</button>
       <button onclick="sendVote(0)" style="background:#ddd;">Pass</button>
+      <button onclick="sendVote(1)" style="background:#c8f3c8;">Agree</button>
     </div>
   </div>
 

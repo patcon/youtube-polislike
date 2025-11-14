@@ -241,7 +241,7 @@ function renderStatements() {
       pane.appendChild(div);
     }
 
-    const prefix = `#${s.statementId} `;
+    const prefix = `#${s.statementId}. `;
 
     if (i < activeIndex) {
       div.className = "statement voted";
