@@ -390,3 +390,32 @@ function onYouTubeIframeAPIReady() {
 
 // Optional: allow manual load via button
 document.getElementById("loadBtn")?.addEventListener("click", () => loadVideo());
+
+// Keyboard shortcuts for voting
+document.addEventListener("keydown", (event) => {
+  // Only handle shortcuts if we're not typing in an input field
+  if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+    return;
+  }
+
+  // Prevent default behavior for our handled keys
+  const handledKeys = ['a', 'd', 'p', 'ArrowLeft', 'ArrowRight', 'ArrowDown'];
+  if (handledKeys.includes(event.key)) {
+    event.preventDefault();
+  }
+
+  switch (event.key) {
+    case 'a':
+    case 'ArrowRight':
+      sendVote(1); // Agree
+      break;
+    case 'd':
+    case 'ArrowLeft':
+      sendVote(-1); // Disagree
+      break;
+    case 'p':
+    case 'ArrowDown':
+      sendVote(0); // Pass
+      break;
+  }
+});
