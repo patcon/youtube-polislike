@@ -1,16 +1,6 @@
 let player;
-let statementIndex = 0;
 let statements = [];
-
-function showStatement() {
-  if (statements.length === 0) {
-    document.getElementById("statement").textContent = "No statements loaded.";
-    return;
-  }
-
-  const current = statements[statementIndex % statements.length];
-  document.getElementById("statement").textContent = current.text.slice(0, 260);
-}
+let activeIndex = -1;   // index of the last unlocked statement
 
 function extractYouTubeID(url) {
   const reg = /(?:v=|youtu\.be\/|embed\/)([^&?/]+)/;
@@ -18,9 +8,7 @@ function extractYouTubeID(url) {
   return match ? match[1] : null;
 }
 
-function onYouTubeIframeAPIReady() {
-  // Player created in loadVideo()
-}
+function onYouTubeIframeAPIReady() {}
 
 async function loadVideo() {
   const url = document.getElementById("ytInput").value;
@@ -31,53 +19,106 @@ async function loadVideo() {
     return;
   }
 
-  // Load YouTube player
+  // Create YouTube player
   player = new YT.Player("videoContainer", {
     height: "100%",
     width: "100%",
     videoId: id,
-    playerVars: { controls: 1 }
+    playerVars: { controls: 1 },
+    events: {
+      onReady: startPolling
+    }
   });
 
-  // Load JSON statements
+  // Load statements file
   const jsonFile = `statements.${id}.json`;
 
   try {
     const res = await fetch(jsonFile);
-    if (!res.ok) throw new Error();
     statements = await res.json();
-    statementIndex = 0;
-    showStatement();
-    console.log(`Loaded ${statements.length} statements from ${jsonFile}`);
-  } catch (e) {
+
+    // Ensure sorted by timecode
+    statements.sort((a, b) => a.timecode - b.timecode);
+
+    activeIndex = -1;
+    clearStatementPane();
+
+  } catch (err) {
     statements = [];
-    document.getElementById("statement").textContent =
-      `Could not load ${jsonFile}`;
+    clearStatementPane();
   }
 }
 
-function sendVote(voteValue) {
-  if (!player) {
-    alert("Load a video first");
-    return;
+/* ---- Helper to clear pane ---- */
+
+function clearStatementPane() {
+  document.getElementById("statement").textContent = "";
+}
+
+/* ---- Poll video time ---- */
+
+function startPolling() {
+  setInterval(checkForStatementActivation, 500);
+}
+
+function checkForStatementActivation() {
+  if (!player || statements.length === 0) return;
+
+  const t = player.getCurrentTime();
+  let newest = -1;
+
+  // Find the most recent statement whose timecode has passed
+  for (let i = 0; i < statements.length; i++) {
+    if (t >= statements[i].timecode) newest = i;
+    else break; // since sorted, no need to continue
   }
-  if (statements.length === 0) {
-    alert("No statements loaded");
+
+  if (newest !== activeIndex) {
+    activeIndex = newest;
+    showActiveStatement();
+  }
+}
+
+function showActiveStatement() {
+  if (activeIndex < 0) {
+    clearStatementPane();
     return;
   }
 
-  const currentTime = Math.floor(player.getCurrentTime());
-  const currentStatement = statements[statementIndex];
+  const s = statements[activeIndex];
+  document.getElementById("statement").textContent = s.text.slice(0, 260);
+}
+
+/* ---- Voting ---- */
+
+function sendVote(voteValue) {
+  if (activeIndex < 0) {
+    alert("No active statement yet.");
+    return;
+  }
+
+  const current = statements[activeIndex];
+  const t = Math.floor(player.getCurrentTime());
 
   const voteObj = {
     vote: voteValue,
-    statementId: currentStatement.statementId,
-    loadedTimecode: currentStatement.timecode,
-    videoTimecode: currentTime
+    statementId: current.statementId,
+    loadedTimecode: current.timecode,
+    videoTimecode: t
   };
 
   console.log("VOTE:", voteObj);
 
-  statementIndex++;
-  showStatement();
+  // Advance to next statement ONLY if its time has passed
+  const nextIndex = activeIndex + 1;
+
+  if (
+    nextIndex < statements.length &&
+    player.getCurrentTime() >= statements[nextIndex].timecode
+  ) {
+    activeIndex = nextIndex;
+    showActiveStatement();
+  } else {
+    clearStatementPane();
+  }
 }
