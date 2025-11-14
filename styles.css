@@ -65,6 +65,44 @@ body {
   border: 0;
 }
 
+/* New animation states */
+#statementsPane .statement.voting-agree {
+  background: #c8f3c8 !important;
+  color: #000 !important;
+  transition: all 0.3s ease;
+}
+
+#statementsPane .statement.voting-disagree {
+  background: #f3c8c8 !important;
+  color: #000 !important;
+  transition: all 0.3s ease;
+}
+
+#statementsPane .statement.voting-pass {
+  background: #ddd !important;
+  color: #000 !important;
+  transition: all 0.3s ease;
+}
+
+#statementsPane .statement.fading-out {
+  opacity: 0;
+  transform: scale(0.95);
+  transition: all 0.4s ease;
+}
+
+#statementsPane .statement.facing-out {
+  transform: translateX(-100%);
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+#statementsPane .statement.no-next {
+  filter: blur(2px);
+  transform: scale(0.8);
+  opacity: 0.5;
+  transition: all 0.5s ease;
+}
+
 /* Timeline */
 #timelineWrapper {
   height: 40px;

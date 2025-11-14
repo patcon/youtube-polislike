@@ -75,10 +75,26 @@ function checkForUnlocks() {
   }
 
   if (newest !== unlockedIndex) {
+    const oldUnlockedIndex = unlockedIndex;
     unlockedIndex = newest;
 
     // First unlocked statement becomes active
     if (activeIndex < 0 && unlockedIndex >= 0) activeIndex = 0;
+
+    // If we were waiting for a next statement and one just unlocked
+    if (oldUnlockedIndex < activeIndex + 1 && unlockedIndex >= activeIndex + 1) {
+      const waitingDiv = document.querySelector(`#statementsPane .statement.no-next`);
+      if (waitingDiv) {
+        // Transition from waiting state to face-out, then move to next
+        waitingDiv.classList.remove("no-next");
+        waitingDiv.classList.add("facing-out");
+        
+        setTimeout(() => {
+          activeIndex++;
+          renderStatements();
+        }, 300);
+      }
+    }
 
     renderStatements();
   }
@@ -254,14 +270,27 @@ function renderStatements() {
 
     const prefix = `#${s.statementId}. `;
 
-    if (i < activeIndex) {
-      div.className = "statement voted";
-    } else if (i === activeIndex) {
-      div.className = "statement active";
+    // Don't change classes if the div is currently animating
+    const isAnimating = div.classList.contains("voting-agree") ||
+                       div.classList.contains("voting-disagree") ||
+                       div.classList.contains("voting-pass") ||
+                       div.classList.contains("fading-out") ||
+                       div.classList.contains("facing-out") ||
+                       div.classList.contains("no-next");
+
+    if (!isAnimating) {
+      if (i < activeIndex) {
+        div.className = "statement voted";
+      } else if (i === activeIndex) {
+        div.className = "statement active";
+        div.textContent = prefix + s.text.slice(0, 260);
+      } else {
+        div.className = "statement redacted";
+        div.textContent = prefix + redactText(s.text.slice(0, 260));
+      }
+    } else if (i === activeIndex && div.classList.contains("active")) {
+      // Update text content even during animation for active statement
       div.textContent = prefix + s.text.slice(0, 260);
-    } else {
-      div.className = "statement redacted";
-      div.textContent = prefix + redactText(s.text.slice(0, 260));
     }
 
     newContent.push(div);
@@ -274,6 +303,9 @@ function renderStatements() {
 
 /* --- Voting --- */
 function sendVote(voteValue) {
+  let targetIndex = activeIndex;
+  let div;
+
   if (activeIndex < 0) {
     if (unlockedIndex >= 0) {
       activeIndex = 0;
@@ -285,7 +317,19 @@ function sendVote(voteValue) {
     }
   }
 
-  const current = statements[activeIndex];
+  // Check if there's a statement in "no-next" state (waiting for next statement)
+  const waitingDiv = document.querySelector(`#statementsPane .statement.no-next`);
+  if (waitingDiv) {
+    // Re-vote on the waiting statement
+    div = waitingDiv;
+    targetIndex = activeIndex; // Keep the same activeIndex
+  } else {
+    // Normal voting on active statement
+    div = document.querySelector(`#statementsPane .statement[data-id='${statements[activeIndex].statementId}']`);
+    if (!div) return;
+  }
+
+  const current = statements[targetIndex];
   const t = Math.floor(player.getCurrentTime());
 
   const voteObj = {
@@ -296,14 +340,43 @@ function sendVote(voteValue) {
   };
   console.log("VOTE:", voteObj);
 
-  // Fade out voted statement
-  const div = document.querySelector(`#statementsPane .statement[data-id='${current.statementId}']`);
-  if (div) div.classList.add("voted");
+  // Check if there's a next statement available and unlocked
+  const hasNextStatement = activeIndex + 1 < statements.length && activeIndex + 1 <= unlockedIndex;
 
-  div.addEventListener("transitionend", () => {
-    activeIndex++;
-    renderStatements();
-  }, { once: true });
+  // Determine vote color class
+  let voteClass;
+  if (voteValue === 1) voteClass = "voting-agree";
+  else if (voteValue === -1) voteClass = "voting-disagree";
+  else voteClass = "voting-pass";
+
+  // Clear all previous voting classes
+  div.classList.remove("voting-agree", "voting-disagree", "voting-pass", "no-next");
+
+  // Step 1: Flash appropriate color
+  div.classList.add(voteClass);
+
+  setTimeout(() => {
+    // Keep the color but proceed with next steps
+    if (hasNextStatement) {
+      // Step 2a: Fade out then face out before next card moves in
+      div.classList.add("fading-out");
+
+      setTimeout(() => {
+        div.classList.remove("fading-out");
+        div.classList.add("facing-out");
+
+        setTimeout(() => {
+          // Move to next statement
+          activeIndex++;
+          renderStatements();
+        }, 300); // Wait for face-out animation
+      }, 400); // Wait for fade-out animation
+    } else {
+      // Step 2b: No next card available - blur, shrink, and dim but stay with color
+      div.classList.add("no-next");
+      // Don't increment activeIndex - stay on this statement
+    }
+  }, 300); // Wait for color flash
 }
 
 /* --- YouTube API ready callback --- */
