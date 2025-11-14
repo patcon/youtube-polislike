@@ -55,6 +55,7 @@ body {
 }
 #statementsPane .statement.redacted {
   color: #666;
+  line-height: 1.6;
 }
 #statementsPane .statement.voted {
   opacity: 0;
