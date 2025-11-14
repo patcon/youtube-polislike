@@ -126,7 +126,7 @@ function drawTimeline() {
   // Clear
   ctx.clearRect(0, 0, width, height);
 
-  // Center line
+  // Center line (current time marker - stays fixed)
   ctx.strokeStyle = "#000";
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -134,18 +134,29 @@ function drawTimeline() {
   ctx.lineTo(centerX, height);
   ctx.stroke();
 
-  // 1-second ticks
+  // 1-second ticks (move with time)
   ctx.strokeStyle = "#aaa";
   ctx.lineWidth = 1;
-  for (let sec = -range; sec <= range; sec++) {
-    const x = centerX + (sec / range) * (width / 2);
-    ctx.beginPath();
-    ctx.moveTo(x, height * 0.6);
-    ctx.lineTo(x, height);
-    ctx.stroke();
+  
+  // Calculate the fractional part of current time for smooth movement
+  const timeFraction = now % 1;
+  
+  // Draw ticks for a wider range to ensure smooth scrolling
+  for (let sec = -range - 1; sec <= range + 1; sec++) {
+    // Offset each tick by the fractional time to create smooth movement
+    const tickTime = sec - timeFraction;
+    const x = centerX + (tickTime / range) * (width / 2);
+    
+    // Only draw if within visible range
+    if (x >= 0 && x <= width) {
+      ctx.beginPath();
+      ctx.moveTo(x, height * 0.6);
+      ctx.lineTo(x, height);
+      ctx.stroke();
+    }
   }
 
-  // Statement dots
+  // Statement dots (move with time, staying at their fixed positions)
   ctx.fillStyle = "red";
   statements.forEach(s => {
     const offset = s.timecode - now;
