@@ -137,16 +137,16 @@ function drawTimeline() {
   // 1-second ticks (move with time)
   ctx.strokeStyle = "#aaa";
   ctx.lineWidth = 1;
-  
+
   // Calculate the fractional part of current time for smooth movement
   const timeFraction = now % 1;
-  
+
   // Draw ticks for a wider range to ensure smooth scrolling
   for (let sec = -range - 1; sec <= range + 1; sec++) {
     // Offset each tick by the fractional time to create smooth movement
     const tickTime = sec - timeFraction;
     const x = centerX + (tickTime / range) * (width / 2);
-    
+
     // Only draw if within visible range
     if (x >= 0 && x <= width) {
       ctx.beginPath();
@@ -161,18 +161,18 @@ function drawTimeline() {
     const offset = s.timecode - now;
     if (offset >= -range && offset <= range) {
       const x = centerX + (offset / range) * (width / 2);
-      
+
       // 500ms transition window (0.5 seconds)
       const transitionWindow = 0.5;
-      
+
       // Smooth easing function (ease-in-out cubic)
       const easeInOutCubic = (t) => {
         return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
       };
-      
+
       // Calculate visual properties based on position relative to center
       let size, opacity, color;
-      
+
       if (offset > transitionWindow) {
         // Far future: light grey, small (default approaching state)
         size = 3;
@@ -182,10 +182,10 @@ function drawTimeline() {
         // Approaching within 500ms: transition from light/small to dark/large
         const progress = (transitionWindow - offset) / transitionWindow; // 0 to 1
         const easedProgress = easeInOutCubic(progress);
-        
+
         size = 3 + (easedProgress * 4); // 3px to 7px
         opacity = 0.4 + (easedProgress * 0.5); // 0.4 to 0.9
-        
+
         // Color transitions from light grey to dark grey
         const greyValue = Math.floor(180 - (easedProgress * 130)); // 180 to 50
         color = `rgba(${greyValue}, ${greyValue}, ${greyValue}, ${opacity})`;
@@ -193,10 +193,10 @@ function drawTimeline() {
         // Just passed within 500ms: transition from dark/large to medium/medium
         const progress = Math.abs(offset) / transitionWindow; // 0 to 1
         const easedProgress = easeInOutCubic(progress);
-        
+
         size = 7 - (easedProgress * 2); // 7px to 5px
         opacity = 0.9 - (easedProgress * 0.3); // 0.9 to 0.6
-        
+
         // Color transitions from dark grey to medium grey
         const greyValue = Math.floor(50 + (easedProgress * 50)); // 50 to 100
         color = `rgba(${greyValue}, ${greyValue}, ${greyValue}, ${opacity})`;
@@ -206,7 +206,7 @@ function drawTimeline() {
         opacity = 0.6;
         color = `rgba(100, 100, 100, ${opacity})`;
       }
-      
+
       ctx.fillStyle = color;
       ctx.beginPath();
       ctx.arc(x, height * 0.3, size, 0, Math.PI * 2);
