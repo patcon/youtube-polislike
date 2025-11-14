@@ -1,6 +1,7 @@
 let player;
 let statements = [];
-let activeIndex = -1;   // index of the last unlocked statement
+let activeIndex = -1; // last fully visible / voted statement
+let unlockedIndex = -1; // highest index whose timecode has passed
 
 function extractYouTubeID(url) {
   const reg = /(?:v=|youtu\.be\/|embed\/)([^&?/]+)/;
@@ -8,16 +9,11 @@ function extractYouTubeID(url) {
   return match ? match[1] : null;
 }
 
-function onYouTubeIframeAPIReady() {}
-
 async function loadVideo() {
   const url = document.getElementById("ytInput").value;
   const id = extractYouTubeID(url);
 
-  if (!id) {
-    alert("Invalid YouTube URL");
-    return;
-  }
+  if (!id) return alert("Invalid YouTube URL");
 
   // Create YouTube player
   player = new YT.Player("videoContainer", {
@@ -25,76 +21,102 @@ async function loadVideo() {
     width: "100%",
     videoId: id,
     playerVars: { controls: 1 },
-    events: {
-      onReady: startPolling
-    }
+    events: { onReady: startPolling }
   });
 
-  // Load statements file
+  // Load statements JSON
   const jsonFile = `statements.${id}.json`;
-
   try {
     const res = await fetch(jsonFile);
     statements = await res.json();
-
-    // Ensure sorted by timecode
-    statements.sort((a, b) => a.timecode - b.timecode);
-
-    activeIndex = -1;
-    clearStatementPane();
-
+    statements.sort((a, b) => Number(a.timecode) - Number(b.timecode));
   } catch (err) {
     statements = [];
-    clearStatementPane();
   }
+
+  activeIndex = -1;
+  unlockedIndex = -1;
+  renderStatements();
 }
 
-/* ---- Helper to clear pane ---- */
-
-function clearStatementPane() {
-  document.getElementById("statement").textContent = "";
-}
-
-/* ---- Poll video time ---- */
-
+/* --- Poll video time --- */
 function startPolling() {
-  setInterval(checkForStatementActivation, 500);
+  setInterval(checkForUnlocks, 500);
 }
 
-function checkForStatementActivation() {
+function checkForUnlocks() {
   if (!player || statements.length === 0) return;
 
   const t = player.getCurrentTime();
   let newest = -1;
 
-  // Find the most recent statement whose timecode has passed
+  // Find the newest statement whose timecode has passed
   for (let i = 0; i < statements.length; i++) {
-    if (t >= statements[i].timecode) newest = i;
-    else break; // since sorted, no need to continue
+    if (t >= Number(statements[i].timecode)) newest = i;
+    else break;
   }
 
-  if (newest !== activeIndex) {
-    activeIndex = newest;
-    showActiveStatement();
+  if (newest !== unlockedIndex) {
+    unlockedIndex = newest;
+
+    // If first statement unlocked, make it active
+    if (activeIndex < 0 && unlockedIndex >= 0) activeIndex = 0;
+
+    renderStatements();
   }
 }
 
-function showActiveStatement() {
-  if (activeIndex < 0) {
-    clearStatementPane();
-    return;
-  }
-
-  const s = statements[activeIndex];
-  document.getElementById("statement").textContent = s.text.slice(0, 260);
+/* --- Redaction helper --- */
+function redactText(str) {
+  // Replace every 2 consecutive non-whitespace chars with one █
+  const pairs = str.match(/(?:\S{2})|\S/g) || [];
+  return pairs.map(chunk => chunk.trim() ? "█" : chunk).join(" ");
 }
 
-/* ---- Voting ---- */
+/* --- Render statements --- */
+function renderStatements() {
+  const pane = document.getElementById("statementsPane");
+  pane.innerHTML = "";
 
+  if (unlockedIndex < 0) return; // nothing unlocked yet
+
+  for (let i = 0; i <= unlockedIndex; i++) {
+    const s = statements[i];
+    const div = document.createElement("div");
+
+    div.style.marginBottom = "15px";
+    div.style.padding = "10px";
+    div.style.border = "1px solid #ccc";
+    div.style.borderRadius = "4px";
+    div.style.background = "#fafafa";
+
+    if (i <= activeIndex) {
+      // Already voted or active: show full text
+      div.textContent = s.text.slice(0, 260);
+      div.style.background = "#fff";
+      div.style.fontWeight = "bold";
+    } else {
+      // Future unlocked statement: show redacted
+      div.textContent = redactText(s.text.slice(0, 260));
+      div.style.color = "#666";
+    }
+
+    pane.appendChild(div);
+  }
+}
+
+/* --- Voting --- */
 function sendVote(voteValue) {
   if (activeIndex < 0) {
-    alert("No active statement yet.");
-    return;
+    // First eligible statement
+    if (unlockedIndex >= 0) {
+      activeIndex = 0;
+      renderStatements();
+      return;
+    } else {
+      alert("No active statement yet.");
+      return;
+    }
   }
 
   const current = statements[activeIndex];
@@ -109,16 +131,8 @@ function sendVote(voteValue) {
 
   console.log("VOTE:", voteObj);
 
-  // Advance to next statement ONLY if its time has passed
-  const nextIndex = activeIndex + 1;
+  // Move active pointer forward, but only up to unlockedIndex
+  if (activeIndex + 1 <= unlockedIndex) activeIndex++;
 
-  if (
-    nextIndex < statements.length &&
-    player.getCurrentTime() >= statements[nextIndex].timecode
-  ) {
-    activeIndex = nextIndex;
-    showActiveStatement();
-  } else {
-    clearStatementPane();
-  }
+  renderStatements();
 }
