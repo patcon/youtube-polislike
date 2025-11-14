@@ -21,17 +21,27 @@
   },
   {
     "statementId": 5,
-    "timecode": 95,
-    "text": "Data-driven public engagement processes can help reduce polarization by showing areas of broad agreement."
+    "timecode": 52.8,
+    "text": "I believe that our country is flourishing."
   },
   {
     "statementId": 6,
-    "timecode": 140,
-    "text": "Algorithms should be transparent and auditable in order to be trusted in civic decision-making contexts."
+    "timecode": 54.9,
+    "text": "I believe that our country is respected."
   },
   {
     "statementId": 7,
-    "timecode": 210,
-    "text": "The most important factor in deliberative systems is whether participants feel their contributions are taken seriously."
+    "timecode": 56.9,
+    "text": "We are the envy of many nations."
+  },
+  {
+    "statementId": 8,
+    "timecode": 61.1,
+    "text": "I believe we were taken advantage of before Trump's election."
+  },
+  {
+    "statementId": 9,
+    "timecode": 71.4,
+    "text": "Trump has put America first."
   }
 ]
