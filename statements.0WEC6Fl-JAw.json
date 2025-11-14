@@ -1,5 +1,10 @@
 [
   {
+    "statementId": 0,
+    "timecode": 12,
+    "text": "I am (or was) excited for this speech."
+  },
+  {
     "statementId": 1,
     "timecode": 35,
     "text": "I feel that Trump is addressing his peers (past executives) in a respectful way."

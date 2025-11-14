@@ -23,6 +23,7 @@ async function loadVideo() {
     playerVars: { controls: 1 },
     events: { onReady: startPolling }
   });
+  document.getElementById("statementsPane").innerHTML = "";
 
   // Load statements JSON
   const jsonFile = `statements.${id}.json`;
@@ -76,39 +77,52 @@ function redactText(str) {
 /* --- Render statements --- */
 function renderStatements() {
   const pane = document.getElementById("statementsPane");
-  pane.innerHTML = "";
 
-  if (unlockedIndex < 0) return; // nothing unlocked yet
+  // Track existing elements to apply fade-out
+  const existing = Array.from(pane.children);
+  const newContent = [];
+
+  if (unlockedIndex < 0) return;
 
   for (let i = 0; i <= unlockedIndex; i++) {
     const s = statements[i];
-    const div = document.createElement("div");
 
-    div.style.marginBottom = "15px";
-    div.style.padding = "10px";
-    div.style.border = "1px solid #ccc";
-    div.style.borderRadius = "4px";
-    div.style.background = "#fafafa";
-
-    if (i <= activeIndex) {
-      // Already voted or active: show full text
-      div.textContent = s.text.slice(0, 260);
-      div.style.background = "#fff";
-      div.style.fontWeight = "bold";
-    } else {
-      // Future unlocked statement: show redacted
-      div.textContent = redactText(s.text.slice(0, 260));
-      div.style.color = "#666";
+    // Reuse existing div if it exists
+    let div = existing.find(d => d.dataset.id == s.statementId);
+    if (!div) {
+      div = document.createElement("div");
+      div.dataset.id = s.statementId;
+      div.classList.add("statement");
+      pane.appendChild(div);
     }
 
-    pane.appendChild(div);
+    const prefix = `#${s.statementId} `;
+
+    if (i < activeIndex) {
+      // Already voted, keep as voted class (fade handled in vote)
+      div.className = "statement voted";
+    } else if (i === activeIndex) {
+      div.className = "statement active";
+      div.textContent = prefix + s.text.slice(0, 260);
+    } else {
+      div.className = "statement redacted";
+      div.textContent = prefix + redactText(s.text.slice(0, 260));
+    }
+
+    newContent.push(div);
   }
+
+  // Remove any old statements not in newContent after fade
+  existing.forEach(div => {
+    if (!newContent.includes(div)) {
+      div.remove();
+    }
+  });
 }
 
 /* --- Voting --- */
 function sendVote(voteValue) {
   if (activeIndex < 0) {
-    // First eligible statement
     if (unlockedIndex >= 0) {
       activeIndex = 0;
       renderStatements();
@@ -131,8 +145,13 @@ function sendVote(voteValue) {
 
   console.log("VOTE:", voteObj);
 
-  // Move active pointer forward, but only up to unlockedIndex
-  if (activeIndex + 1 <= unlockedIndex) activeIndex++;
+  // Apply voted class to trigger fade/slide
+  const div = document.querySelector(`#statementsPane .statement[data-id='${current.statementId}']`);
+  if (div) div.classList.add("voted");
 
-  renderStatements();
+  // After transition ends, move activeIndex forward and re-render
+  div.addEventListener("transitionend", () => {
+    activeIndex++;
+    renderStatements();
+  }, { once: true });
 }
