@@ -236,6 +236,11 @@ function renderStatements() {
     return;
   }
 
+  // Clear any text content when statements start appearing
+  if (pane.innerHTML && !pane.querySelector('.statement')) {
+    pane.innerHTML = "";
+  }
+
   for (let i = 0; i <= unlockedIndex; i++) {
     const s = statements[i];
 
