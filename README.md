@@ -1,5 +1,7 @@
 # YouTube Polislike
 
+<img width="50%" alt="Screenshot 2025-11-14 at 5 04 50 PM" src="https://github.com/user-attachments/assets/88143540-f625-4238-b09c-ff3498778261" />
+
 This a prototype of how it might work to collect polislike reaction data in response to recorded YouTube video.
 
 There is currently no backend, and statement and vote data is hardcoded into the simple app for one specific video: [Trump's 2025 Inauguration Address](https://www.youtube.com/watch?v=0WEC6Fl-JAw)
