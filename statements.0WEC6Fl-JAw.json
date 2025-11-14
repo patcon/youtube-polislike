@@ -1,0 +1,27 @@
+[
+  {
+    "statementId": 1,
+    "timecode": 12,
+    "text": "The introduction clearly explains the context of this video and sets up the topic being discussed."
+  },
+  {
+    "statementId": 2,
+    "timecode": 48,
+    "text": "The presenter argues that policy decisions often fail because feedback loops between citizens and institutions are broken."
+  },
+  {
+    "statementId": 3,
+    "timecode": 95,
+    "text": "Data-driven public engagement processes can help reduce polarization by showing areas of broad agreement."
+  },
+  {
+    "statementId": 4,
+    "timecode": 140,
+    "text": "Algorithms should be transparent and auditable in order to be trusted in civic decision-making contexts."
+  },
+  {
+    "statementId": 5,
+    "timecode": 210,
+    "text": "The most important factor in deliberative systems is whether participants feel their contributions are taken seriously."
+  }
+]

@@ -49,9 +49,15 @@
 
   <div id="videoPane">
     <div id="controls">
-      <input id="ytInput" type="text" placeholder="Paste YouTube URL here" style="width:60%;">
+      <input id="ytInput" type="text" placeholder="Paste YouTube URL" style="width:45%;">
       <button onclick="loadVideo()">Load Video</button>
+
+      &nbsp;&nbsp;
+
+      <input id="fileInput" type="file" accept=".txt,.json">
+      <button onclick="loadStatementsFromFile()">Load Statements</button>
     </div>
+
     <div id="videoContainer"></div>
   </div>
 

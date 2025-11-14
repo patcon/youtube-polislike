@@ -1,29 +1,26 @@
 let player;
 let statementIndex = 0;
+let statements = [];
 
-// Example 260-char max statements. Replace with your real data.
-const statements = [
-  "Statement 1: This is an example statement for voting.",
-  "Statement 2: Another example question or claim goes here.",
-  "Statement 3: A longer one just to test the 260 character limit. ".repeat(5).slice(0, 260),
-];
+// Load first statement if available
+function showStatement() {
+  if (statements.length === 0) {
+    document.getElementById("statement").textContent = "Load statements to begin.";
+    return;
+  }
 
-// Load first statement
-document.addEventListener("DOMContentLoaded", () => {
-  showStatement();
-});
+  const s = statements[statementIndex % statements.length];
+  document.getElementById("statement").textContent = s.slice(0, 260);
+}
 
-// Extract a YouTube ID from URL
+// Extract YouTube ID from URL
 function extractYouTubeID(url) {
   const reg = /(?:v=|youtu\.be\/|embed\/)([^&?/]+)/;
   const match = url.match(reg);
   return match ? match[1] : null;
 }
 
-// Called when the YouTube API script is ready
-function onYouTubeIframeAPIReady() {
-  // Player created only after user loads a video
-}
+function onYouTubeIframeAPIReady() { /* created on loadVideo */ }
 
 function loadVideo() {
   const url = document.getElementById("ytInput").value;
@@ -34,7 +31,6 @@ function loadVideo() {
     return;
   }
 
-  // Create/recreate player
   player = new YT.Player("videoContainer", {
     height: "100%",
     width: "100%",
@@ -43,14 +39,52 @@ function loadVideo() {
   });
 }
 
-function showStatement() {
-  const s = statements[statementIndex % statements.length];
-  document.getElementById("statement").textContent = s;
+// ----------------------------
+// LOAD STATEMENTS FROM FILE
+// ----------------------------
+function loadStatementsFromFile() {
+  const file = document.getElementById("fileInput").files[0];
+  if (!file) return alert("Choose a file first.");
+
+  const reader = new FileReader();
+
+  reader.onload = () => {
+    const text = reader.result;
+
+    try {
+      if (file.name.endsWith(".json")) {
+        // Option B: JSON file
+        statements = JSON.parse(text);
+      } else {
+        // Option A: Plain text (one statement per line)
+        statements = text
+          .split(/\r?\n/)
+          .map(s => s.trim())
+          .filter(s => s.length > 0);
+      }
+    } catch (err) {
+      alert("Invalid file format.");
+      return;
+    }
+
+    statementIndex = 0;
+    showStatement();
+    console.log(`Loaded ${statements.length} statements.`);
+  };
+
+  reader.readAsText(file);
 }
 
+// ----------------------------
+// VOTING
+// ----------------------------
 function sendVote(voteValue) {
   if (!player) {
     alert("Load a video first");
+    return;
+  }
+  if (statements.length === 0) {
+    alert("Load statements first");
     return;
   }
 
@@ -58,9 +92,9 @@ function sendVote(voteValue) {
   const statementId = statementIndex;
 
   const voteObj = {
-    vote: voteValue,          // +1 / -1 / 0
-    statementId: statementId, // sequential ID
-    timecode: timecode        // seconds
+    vote: voteValue,
+    statementId: statementId,
+    timecode: timecode
   };
 
   console.log("VOTE:", voteObj);
