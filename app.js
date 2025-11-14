@@ -157,25 +157,26 @@ function updateTranscriptDisplay() {
         const progress = Math.min(timeIntoSegment / segmentDuration, 1);
         
         // Calculate how many characters to show based on progress
-        const totalChars = currentSegment.text.length;
+        const segmentText = currentSegment.text.trim().replace(/\s+/g, ' ');
+        const totalChars = segmentText.length;
         const charsToShow = Math.floor(progress * totalChars);
         
-        // Add all previous complete segments
-        if (displayText) displayText += "\n\n";
-        displayText += currentSegment.text.substring(0, charsToShow);
+        // Add all previous complete segments with space separator
+        if (displayText) displayText += " ";
+        displayText += segmentText.substring(0, charsToShow);
         
         foundCurrentSegment = true;
         break;
       } else if (!nextSegment) {
         // This is the last segment and we're past its start time
-        if (displayText) displayText += "\n\n";
-        displayText += currentSegment.text;
+        if (displayText) displayText += " ";
+        displayText += currentSegment.text.trim().replace(/\s+/g, ' ');
         foundCurrentSegment = true;
         break;
       } else {
         // We're past this segment completely - show full text
-        if (displayText) displayText += "\n\n";
-        displayText += currentSegment.text;
+        if (displayText) displayText += " ";
+        displayText += currentSegment.text.trim().replace(/\s+/g, ' ');
       }
     } else {
       // We haven't reached this segment yet
@@ -187,6 +188,9 @@ function updateTranscriptDisplay() {
     textarea.value = "Hit play to see transcript appear here.";
     return;
   }
+
+  // Normalize whitespace in final display text
+  displayText = displayText.replace(/\s+/g, ' ').trim();
 
   // Only update if content has changed to avoid cursor jumping
   if (textarea.value !== displayText) {
