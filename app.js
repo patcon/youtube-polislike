@@ -379,17 +379,62 @@ function sendVote(voteValue) {
   }, 300); // Wait for color flash
 }
 
+/* --- Modal functions --- */
+function showModal() {
+  const modal = document.getElementById("urlModal");
+  modal.classList.add("show");
+  document.getElementById("ytInput").focus();
+}
+
+function hideModal() {
+  const modal = document.getElementById("urlModal");
+  modal.classList.remove("show");
+}
+
 /* --- YouTube API ready callback --- */
 function onYouTubeIframeAPIReady() {
   const hashId = window.location.hash.slice(1);
   if (hashId) {
     document.getElementById("ytInput").value = `https://www.youtube.com/watch?v=${hashId}`;
     loadVideo(hashId);
+  } else {
+    // Show modal if no URL in hash
+    showModal();
   }
 }
 
-// Optional: allow manual load via button
-document.getElementById("loadBtn")?.addEventListener("click", () => loadVideo());
+// Modal form submission
+document.getElementById("urlForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const url = document.getElementById("ytInput").value.trim();
+  if (url) {
+    hideModal();
+    const id = extractYouTubeID(url);
+    if (id) {
+      loadVideo(id);
+    } else {
+      alert("Invalid YouTube URL");
+      showModal();
+    }
+  }
+});
+
+// Cancel modal
+document.getElementById("cancelModal").addEventListener("click", () => {
+  hideModal();
+});
+
+// Configure button to reopen modal
+document.getElementById("configureBtn").addEventListener("click", () => {
+  showModal();
+});
+
+// Close modal when clicking outside
+document.getElementById("urlModal").addEventListener("click", (e) => {
+  if (e.target === e.currentTarget) {
+    hideModal();
+  }
+});
 
 // Keyboard shortcuts for voting
 document.addEventListener("keydown", (event) => {

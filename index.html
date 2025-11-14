@@ -7,12 +7,23 @@
 </head>
 <body>
 
-  <div id="videoPane">
-    <div id="controls">
-      <input id="ytInput" type="text" placeholder="Paste YouTube URL" style="width:60%;">
-      <button onclick="loadVideo()">Load Video + Statements</button>
+  <!-- URL Entry Modal -->
+  <div id="urlModal" class="modal">
+    <div class="modal-content">
+      <h2>Enter YouTube URL</h2>
+      <form id="urlForm">
+        <input id="ytInput" type="text" placeholder="Paste YouTube URL here..." required>
+        <div class="modal-buttons">
+          <button type="submit">Load Video</button>
+          <button type="button" id="cancelModal">Cancel</button>
+        </div>
+      </form>
     </div>
+  </div>
+
+  <div id="videoPane">
     <div id="videoContainer"></div>
+    <button id="configureBtn" class="configure-btn">Configure URL</button>
   </div>
 
   <div id="rightPane">
