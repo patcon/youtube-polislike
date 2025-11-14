@@ -1,31 +1,36 @@
 [
   {
-    "statementId": 0,
-    "timecode": 12,
-    "text": "I am (or was) excited for this speech."
+    "statementId": 1,
+    "timecode": 4,
+    "text": "I hate this timeline."
   },
   {
-    "statementId": 1,
+    "statementId": 2,
+    "timecode": 12,
+    "text": "I was excited for this speech."
+  },
+  {
+    "statementId": 3,
     "timecode": 35,
     "text": "I feel that Trump is addressing his peers (past executives) in a respectful way."
   },
   {
-    "statementId": 2,
+    "statementId": 4,
     "timecode": 39,
     "text": "I believe that a golden age of America began at that moment."
   },
   {
-    "statementId": 3,
+    "statementId": 5,
     "timecode": 95,
     "text": "Data-driven public engagement processes can help reduce polarization by showing areas of broad agreement."
   },
   {
-    "statementId": 4,
+    "statementId": 6,
     "timecode": 140,
     "text": "Algorithms should be transparent and auditable in order to be trusted in civic decision-making contexts."
   },
   {
-    "statementId": 5,
+    "statementId": 7,
     "timecode": 210,
     "text": "The most important factor in deliberative systems is whether participants feel their contributions are taken seriously."
   }
