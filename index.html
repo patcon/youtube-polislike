@@ -10,6 +10,8 @@
       height: 100vh;
       font-family: sans-serif;
     }
+
+    /* Left video pane */
     #videoPane {
       flex: 2;
       background: #000;
@@ -23,27 +25,25 @@
       padding: 10px;
       background: #f3f3f3;
     }
+
+    /* Right pane */
     #rightPane {
       flex: 1;
       border-left: 1px solid #ccc;
       padding: 20px;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-    }
-    #statement {
-      font-size: 18px;
-      line-height: 1.4;
-      white-space: pre-wrap;
-    }
-    #buttons button {
-      width: 100%;
-      padding: 12px;
-      margin-top: 10px;
-      font-size: 16px;
-      cursor: pointer;
     }
 
+    /* Container for statements + timeline (scrollable) */
+    #contentPane {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    /* Statements */
     #statementsPane .statement {
       margin-bottom: 15px;
       padding: 10px;
@@ -54,23 +54,47 @@
       transition: all 0.5s ease;
       overflow: hidden;
     }
-
     #statementsPane .statement.active {
       background: #fff;
       font-weight: bold;
       color: #000;
     }
-
     #statementsPane .statement.redacted {
       color: #666;
     }
-
     #statementsPane .statement.voted {
       opacity: 0;
       height: 0;
       margin: 0;
       padding: 0;
       border: 0;
+    }
+
+    /* Timeline */
+    #timelineWrapper {
+      height: 40px;
+      margin-top: 10px;
+      margin-bottom: 10px;
+      width: 100%;
+    }
+    #timelineCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Buttons fixed at bottom */
+    #buttons {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+    }
+    #buttons button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      font-size: 16px;
+      cursor: pointer;
     }
   </style>
 </head>
@@ -81,12 +105,17 @@
       <input id="ytInput" type="text" placeholder="Paste YouTube URL" style="width:60%;">
       <button onclick="loadVideo()">Load Video + Statements</button>
     </div>
-
     <div id="videoContainer"></div>
   </div>
 
   <div id="rightPane">
-    <div id="statementsPane">Load a video to begin.</div>
+    <div id="contentPane">
+      <div id="statementsPane">Load a video to begin.</div>
+
+      <div id="timelineWrapper">
+        <canvas id="timelineCanvas"></canvas>
+      </div>
+    </div>
 
     <div id="buttons">
       <button onclick="sendVote(1)" style="background:#c8f3c8;">Agree</button>

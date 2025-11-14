@@ -29,7 +29,12 @@ async function loadVideo(id = null) {
     width: "100%",
     videoId: id,
     playerVars: { controls: 1, rel: 0, modestbranding: 1 },
-    events: { onReady: startPolling }
+    events: {
+      onReady: () => {
+        startPolling();    // keep statements unlocking
+        startTimeline();   // smooth timeline update
+      }
+    }
   });
 
   // Clear statements pane
@@ -52,7 +57,10 @@ async function loadVideo(id = null) {
 
 /* --- Poll video time --- */
 function startPolling() {
-  setInterval(checkForUnlocks, 500);
+  setInterval(() => {
+    checkForUnlocks();
+    drawTimeline(); // update timeline
+  }, 100); // update more smoothly
 }
 
 function checkForUnlocks() {
@@ -93,6 +101,68 @@ function redactText(str) {
 
     return "█".repeat(numBlocks);
   }).join("");
+}
+
+/* --- Render timeline --- */
+function drawTimeline() {
+  const canvas = document.getElementById("timelineCanvas");
+  if (!canvas || !player) return;
+  const ctx = canvas.getContext("2d");
+
+  // Use clientWidth/Height for drawing
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
+
+  // Set canvas internal resolution to match CSS size
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+
+  const centerX = width / 2;
+  const now = player.getCurrentTime();
+  const range = 5; // seconds before/after
+
+  // Clear
+  ctx.clearRect(0, 0, width, height);
+
+  // Center line
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(centerX, 0);
+  ctx.lineTo(centerX, height);
+  ctx.stroke();
+
+  // 1-second ticks
+  ctx.strokeStyle = "#aaa";
+  ctx.lineWidth = 1;
+  for (let sec = -range; sec <= range; sec++) {
+    const x = centerX + (sec / range) * (width / 2);
+    ctx.beginPath();
+    ctx.moveTo(x, height * 0.6);
+    ctx.lineTo(x, height);
+    ctx.stroke();
+  }
+
+  // Statement dots
+  ctx.fillStyle = "red";
+  statements.forEach(s => {
+    const offset = s.timecode - now;
+    if (offset >= -range && offset <= range) {
+      const x = centerX + (offset / range) * (width / 2);
+      ctx.beginPath();
+      ctx.arc(x, height * 0.3, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+
+  requestAnimationFrame(drawTimeline);
+}
+
+// Start smooth timeline after player is ready
+function startTimeline() {
+  requestAnimationFrame(drawTimeline);
 }
 
 /* --- Render statements --- */
