@@ -157,13 +157,59 @@ function drawTimeline() {
   }
 
   // Statement dots (move with time, staying at their fixed positions)
-  ctx.fillStyle = "red";
   statements.forEach(s => {
     const offset = s.timecode - now;
     if (offset >= -range && offset <= range) {
       const x = centerX + (offset / range) * (width / 2);
+      
+      // 500ms transition window (0.5 seconds)
+      const transitionWindow = 0.5;
+      
+      // Smooth easing function (ease-in-out cubic)
+      const easeInOutCubic = (t) => {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      };
+      
+      // Calculate visual properties based on position relative to center
+      let size, opacity, color;
+      
+      if (offset > transitionWindow) {
+        // Far future: light grey, small (default approaching state)
+        size = 3;
+        opacity = 0.4;
+        color = `rgba(180, 180, 180, ${opacity})`;
+      } else if (offset > 0) {
+        // Approaching within 500ms: transition from light/small to dark/large
+        const progress = (transitionWindow - offset) / transitionWindow; // 0 to 1
+        const easedProgress = easeInOutCubic(progress);
+        
+        size = 3 + (easedProgress * 4); // 3px to 7px
+        opacity = 0.4 + (easedProgress * 0.5); // 0.4 to 0.9
+        
+        // Color transitions from light grey to dark grey
+        const greyValue = Math.floor(180 - (easedProgress * 130)); // 180 to 50
+        color = `rgba(${greyValue}, ${greyValue}, ${greyValue}, ${opacity})`;
+      } else if (offset > -transitionWindow) {
+        // Just passed within 500ms: transition from dark/large to medium/medium
+        const progress = Math.abs(offset) / transitionWindow; // 0 to 1
+        const easedProgress = easeInOutCubic(progress);
+        
+        size = 7 - (easedProgress * 2); // 7px to 5px
+        opacity = 0.9 - (easedProgress * 0.3); // 0.9 to 0.6
+        
+        // Color transitions from dark grey to medium grey
+        const greyValue = Math.floor(50 + (easedProgress * 50)); // 50 to 100
+        color = `rgba(${greyValue}, ${greyValue}, ${greyValue}, ${opacity})`;
+      } else {
+        // Far past: medium grey, medium size (default passed state)
+        size = 5;
+        opacity = 0.6;
+        color = `rgba(100, 100, 100, ${opacity})`;
+      }
+      
+      ctx.fillStyle = color;
       ctx.beginPath();
-      ctx.arc(x, height * 0.3, 5, 0, Math.PI * 2);
+      ctx.arc(x, height * 0.3, size, 0, Math.PI * 2);
       ctx.fill();
     }
   });
