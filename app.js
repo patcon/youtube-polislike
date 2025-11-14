@@ -41,7 +41,7 @@ async function loadVideo(id = null) {
   document.getElementById("statementsPane").innerHTML = "";
 
   // Load statements JSON
-  const jsonFile = `statements.${id}.json`;
+  const jsonFile = `data/statements.${id}.json`;
   try {
     const res = await fetch(jsonFile);
     statements = await res.json();
