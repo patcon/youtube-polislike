@@ -4,6 +4,15 @@ let activeIndex = -1;      // last fully visible / voted statement
 let unlockedIndex = -1;    // highest index whose timecode has passed
 let transcript = "";       // full transcript text
 let transcriptLines = [];  // parsed transcript lines with timestamps
+let voteEvents = [];       // synthetic vote events
+let processedVoteEvents = new Set(); // track which vote events have been processed
+let statementVoteCounts = {}; // track vote counts per statement for coloring
+let recentVoteFlashes = new Map(); // track recent vote flashes for visual effects
+const NUM_PARTICIPANTS = 25; // Number of synthetic participants
+const VOTE_DELAY_MIN = 1.0; // Minimum seconds after statement appears before votes start
+const VOTE_DELAY_MAX = 8.0; // Maximum seconds after statement appears for votes to arrive
+const VOTE_DELAY_MEAN = 3.0; // Mean time for votes to arrive (seconds)
+const VOTE_DELAY_STDDEV = 2.0; // Standard deviation for vote timing (seconds)
 
 function extractYouTubeID(url) {
   const reg = /(?:v=|youtu\.be\/|embed\/)([^&?/]+)/;
@@ -57,7 +66,90 @@ async function loadVideo(id = null) {
 
   activeIndex = -1;
   unlockedIndex = -1;
+  
+  // Generate synthetic vote events for this video
+  generateSyntheticVotes();
+  
   renderStatements();
+}
+
+/* --- Synthetic Vote Generation --- */
+// Random bias for a statement: lean (-1..1) and pass probability 0.05–0.15
+function randomBias() {
+  const lean = (Math.random() * 2) - 1;   // -1 = strongly disagree, +1 = strongly agree
+  const pPass = 0.05 + Math.random() * 0.10;
+  const pAgree = (1 - pPass) * (1 + lean) / 2;
+  const pDisagree = (1 - pPass) * (1 - lean) / 2;
+  return { pAgree, pDisagree, pPass };
+}
+
+// Returns +1 (agree) / -1 (disagree) / 0 (pass)
+function sampleVote(p) {
+  const r = Math.random();
+  if (r < p.pAgree) return 1;
+  else if (r < p.pAgree + p.pDisagree) return -1;
+  else return 0;
+}
+
+// Generate a normally distributed random number using Box-Muller transform
+function normalRandom(mean, stddev) {
+  let u = 0, v = 0;
+  while(u === 0) u = Math.random(); // Converting [0,1) to (0,1)
+  while(v === 0) v = Math.random();
+  const z = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  return z * stddev + mean;
+}
+
+// Generate vote delay with normal distribution, clamped to min/max bounds
+function generateVoteDelay() {
+  let delay = normalRandom(VOTE_DELAY_MEAN, VOTE_DELAY_STDDEV);
+  // Clamp to bounds
+  delay = Math.max(VOTE_DELAY_MIN, Math.min(VOTE_DELAY_MAX, delay));
+  return delay;
+}
+
+// Generate vote events
+function generateSyntheticVotes() {
+  if (statements.length === 0) return;
+  
+  voteEvents = [];
+  processedVoteEvents.clear();
+  statementVoteCounts = {};
+  recentVoteFlashes.clear();
+
+  // Initialize vote counts for each statement
+  statements.forEach(s => {
+    statementVoteCounts[s.statementId] = { agree: 0, disagree: 0, pass: 0 };
+  });
+
+  // Precompute a bias for each statement
+  const biases = {};
+  for (const s of statements) {
+    biases[s.statementId] = randomBias();
+  }
+
+  for (let participantId = 0; participantId < NUM_PARTICIPANTS; participantId++) {
+    for (const s of statements) {
+      const p = biases[s.statementId];
+      const vote = sampleVote(p);
+
+      // Use normally distributed delay with configurable parameters
+      const delay = generateVoteDelay();
+      const timecode = s.timecode + delay;
+
+      voteEvents.push({
+        participantId,
+        statementId: s.statementId,
+        vote,          // +1 / -1 / 0
+        timecode       // always >= statement startTime
+      });
+    }
+  }
+
+  // Sort events by time order
+  voteEvents.sort((a, b) => a.timecode - b.timecode);
+  
+  console.log(`Generated ${voteEvents.length} synthetic vote events for ${NUM_PARTICIPANTS} participants`);
 }
 
 /* --- Transcript functions --- */
@@ -208,9 +300,121 @@ function updateTranscriptDisplay() {
 function startPolling() {
   setInterval(() => {
     checkForUnlocks();
+    processVoteEvents(); // process synthetic votes
     drawTimeline(); // update timeline
     updateTranscriptDisplay(); // update visible transcript content
   }, 100); // update more smoothly
+}
+
+/* --- Vote Event Processing --- */
+function processVoteEvents() {
+  if (!player || voteEvents.length === 0) return;
+  
+  const currentTime = player.getCurrentTime();
+  
+  // Process all vote events that should have happened by now
+  voteEvents.forEach((event, index) => {
+    const eventKey = `${event.participantId}-${event.statementId}-${event.timecode}`;
+    
+    if (currentTime >= event.timecode && !processedVoteEvents.has(eventKey)) {
+      // Process this vote event
+      processedVoteEvents.add(eventKey);
+      
+      // Update vote counts
+      if (statementVoteCounts[event.statementId]) {
+        if (event.vote === 1) {
+          statementVoteCounts[event.statementId].agree++;
+        } else if (event.vote === -1) {
+          statementVoteCounts[event.statementId].disagree++;
+        } else {
+          statementVoteCounts[event.statementId].pass++;
+        }
+      }
+      
+      // Add flash effect for this vote
+      const flashKey = `${event.statementId}-${Date.now()}`;
+      recentVoteFlashes.set(flashKey, {
+        statementId: event.statementId,
+        vote: event.vote,
+        timestamp: Date.now(),
+        intensity: 1.0
+      });
+      
+      // Remove flash after 500ms
+      setTimeout(() => {
+        recentVoteFlashes.delete(flashKey);
+      }, 500);
+    }
+  });
+  
+  // Update flash intensities (fade out over time)
+  const now = Date.now();
+  recentVoteFlashes.forEach((flash, key) => {
+    const age = now - flash.timestamp;
+    flash.intensity = Math.max(0, 1 - (age / 500)); // Fade over 500ms
+    if (flash.intensity <= 0) {
+      recentVoteFlashes.delete(key);
+    }
+  });
+}
+
+// Get the dominant vote color for a statement with flash effects
+function getStatementColor(statementId, baseOpacity = 1.0) {
+  // Check for recent vote flashes for this statement first - they take priority
+  let strongestFlash = null;
+  let maxFlashIntensity = 0;
+  
+  recentVoteFlashes.forEach(flash => {
+    if (flash.statementId === statementId && flash.intensity > maxFlashIntensity) {
+      maxFlashIntensity = flash.intensity;
+      strongestFlash = flash;
+    }
+  });
+  
+  // If there's an active flash, show it prominently
+  if (strongestFlash && maxFlashIntensity > 0) {
+    let flashColor;
+    if (strongestFlash.vote === 1) {
+      flashColor = { r: 34, g: 197, b: 94 }; // Bright green for agree
+    } else if (strongestFlash.vote === -1) {
+      flashColor = { r: 248, g: 113, b: 113 }; // Bright red for disagree
+    } else {
+      flashColor = { r: 209, g: 213, b: 219 }; // Bright gray for pass
+    }
+    
+    // Make flash very visible with high opacity
+    const flashAlpha = 0.7 + (maxFlashIntensity * 0.3); // 0.7 to 1.0 alpha
+    return `rgba(${flashColor.r}, ${flashColor.g}, ${flashColor.b}, ${flashAlpha * baseOpacity})`;
+  }
+  
+  // No active flash, show base accumulated color if any votes have been cast
+  const counts = statementVoteCounts[statementId];
+  if (counts) {
+    const total = counts.agree + counts.disagree + counts.pass;
+    if (total > 0) {
+      // Determine dominant vote type
+      const maxCount = Math.max(counts.agree, counts.disagree, counts.pass);
+      
+      if (counts.agree === maxCount) {
+        // Muted green for agree base
+        const intensity = counts.agree / total;
+        const alpha = (0.2 + (intensity * 0.3)) * baseOpacity; // 0.2 to 0.5 alpha
+        return `rgba(72, 187, 120, ${alpha})`;
+      } else if (counts.disagree === maxCount) {
+        // Muted red for disagree base
+        const intensity = counts.disagree / total;
+        const alpha = (0.2 + (intensity * 0.3)) * baseOpacity; // 0.2 to 0.5 alpha
+        return `rgba(239, 68, 68, ${alpha})`;
+      } else {
+        // Muted gray for pass base
+        const intensity = counts.pass / total;
+        const alpha = (0.2 + (intensity * 0.3)) * baseOpacity; // 0.2 to 0.5 alpha
+        return `rgba(156, 163, 175, ${alpha})`;
+      }
+    }
+  }
+  
+  return null; // No votes yet, use default gray
 }
 
 function checkForUnlocks() {
@@ -343,7 +547,8 @@ function drawTimeline() {
         // Far future: light grey, small (default approaching state)
         size = 3;
         opacity = 0.4;
-        color = `rgba(180, 180, 180, ${opacity})`;
+        const voteColor = getStatementColor(s.statementId, opacity);
+        color = voteColor || `rgba(180, 180, 180, ${opacity})`;
       } else if (offset > 0) {
         // Approaching within 500ms: transition from light/small to dark/large
         const progress = (transitionWindow - offset) / transitionWindow; // 0 to 1
@@ -352,9 +557,14 @@ function drawTimeline() {
         size = 3 + (easedProgress * 4); // 3px to 7px
         opacity = 0.4 + (easedProgress * 0.5); // 0.4 to 0.9
 
-        // Color transitions from light grey to dark grey
-        const greyValue = Math.floor(180 - (easedProgress * 130)); // 180 to 50
-        color = `rgba(${greyValue}, ${greyValue}, ${greyValue}, ${opacity})`;
+        const voteColor = getStatementColor(s.statementId, opacity);
+        if (voteColor) {
+          color = voteColor;
+        } else {
+          // Color transitions from light grey to dark grey
+          const greyValue = Math.floor(180 - (easedProgress * 130)); // 180 to 50
+          color = `rgba(${greyValue}, ${greyValue}, ${greyValue}, ${opacity})`;
+        }
       } else if (offset > -transitionWindow) {
         // Just passed within 500ms: transition from dark/large to medium/medium
         const progress = Math.abs(offset) / transitionWindow; // 0 to 1
@@ -363,14 +573,24 @@ function drawTimeline() {
         size = 7 - (easedProgress * 2); // 7px to 5px
         opacity = 0.9 - (easedProgress * 0.3); // 0.9 to 0.6
 
-        // Color transitions from dark grey to medium grey
-        const greyValue = Math.floor(50 + (easedProgress * 50)); // 50 to 100
-        color = `rgba(${greyValue}, ${greyValue}, ${greyValue}, ${opacity})`;
+        const voteColor = getStatementColor(s.statementId, opacity);
+        if (voteColor) {
+          color = voteColor;
+        } else {
+          // Color transitions from dark grey to medium grey
+          const greyValue = Math.floor(50 + (easedProgress * 50)); // 50 to 100
+          color = `rgba(${greyValue}, ${greyValue}, ${greyValue}, ${opacity})`;
+        }
       } else {
         // Far past: medium grey, medium size (default passed state)
         size = 5;
         opacity = 0.6;
-        color = `rgba(100, 100, 100, ${opacity})`;
+        const voteColor = getStatementColor(s.statementId, opacity);
+        if (voteColor) {
+          color = voteColor;
+        } else {
+          color = `rgba(100, 100, 100, ${opacity})`;
+        }
       }
 
       ctx.fillStyle = color;
